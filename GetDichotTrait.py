@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue May 26 18:24:27 2020
-@author: giork
 
 This gets an ICD10 disease-class code, merges all the subphenotypes, and creates a new file with (ID, disease) tuples.
 E.g. for I25, it will make a variable indicating every I250-I259 case.
@@ -11,7 +10,6 @@ TODO: support merging of only a few sub-phenotypes
 TODO: sample selection?
 """
 import sys 
-import pandas as pd
 
 ToF = sys.argv[1]
 if len(sys.argv)>2:
@@ -24,16 +22,21 @@ else:
 print("Extracting UKBB cases for "+ToF+". Results will be saved as "+fout)
 
 Traits = {}
-with open("Pheno_ICD10.tab", 'r') as fin:
-    _=next(fin)
-    for line in fin:
+with open("Pheno_ICD10.tab", 'r') as f:
+    _=next(f) # skip header
+    for line in f:
         tokens=line.split()
-        Traits[ int(tokens[0]) ]=tokens[1:]
+        Traits[ tokens[0] ]=tokens[1:]
     
-print("Data for",len(Traits),"samples were loaded!")
+#print("Data for",len(Traits),"samples were loaded!")
 
-Mapping=pd.read_csv("mapping_biased.csv", sep=',')
-Samples = [x for x in list(Mapping['ukb43206']) if x in Traits ]
+Mapping = {}
+with open("mapping.csv", 'r') as f:
+    _=next(f) # skip header
+    for line in f:
+        tokens=line.split(sep=',')
+        Mapping[ tokens[2][:-1] ] = tokens[0] # map UKBB-ID to IBD-ID and get rid of "\n"
+Samples = [x for x in Mapping if x in Traits ]
 print("Subjects to keep = %d" % len(Samples))
 
 total=0
@@ -45,8 +48,7 @@ with open(fout,'w') as f:
             T = T or s.startswith(ToF)
         value = '1' if T else '0'
         total += int(value)
-        f.write(str(x)+"\t"+value+"\n")
+        f.write(Mapping[x]+"\t"+value+"\n")
         
 print(total,"cases were written. Bye!")
 # end-of-script        
-    
