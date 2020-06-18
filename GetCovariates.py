@@ -7,6 +7,8 @@ OUTPUT: Tab delimited file of covariates+PCAs, with new index and sample-selecti
 """
 import pandas as pd
 import numpy as np
+from scipy import stats
+
 
 file_out="Covariates.tab"
 
@@ -24,14 +26,15 @@ with open("mapping.csv", 'r') as f:
     for line in f:
         tokens=line.split(sep=',')
         # map UKBB-ID to IBD-ID and get rid of "\n":
-        Mapping[ int(tokens[2][:-1]) ] = tokens[0] # Mapping has int -> str
+        Mapping[ int(tokens[2][:-1]) ] = (tokens[0], tokens[1]) # Mapping has int -> (str, str)
 Samples = [x for x in Mapping if x in ukbb_data.index ] #
 print("Subjects to keep = %d" % len(Samples))
 print("\t Remember to check that fields with arrays are properly processed!")
 
 Covariates = pd.DataFrame()
-Covariates['IID'] = [ Mapping[s] for s in Samples ]
-Covariates['UKBB_ID'] = Samples # this is just for double-checking
+Covariates['IID'] = [ Mapping[s][0] for s in Samples ]
+Covariates['UKBB_1'] = [ Mapping[s][1] for s in Samples ]
+Covariates['UKBB_2'] = Samples # this is just for double-checking
 
 Covariates['Sex'] = [ ukbb_data['31-0.0'][s] for s in Samples ]
 Covariates['Heel_bmd'] = [ ukbb_data['3148-0.0'][s] for s in Samples ]
@@ -98,9 +101,9 @@ for s in Samples:
     if len(temp_BMI)*len(temp_site)*len(temp_smok)==0:
         problematic.append(s)#
     # the next lists all follow the same order as `Samples`
+    Smoking.append( stats.mode(temp_smok)[0][0] if len(temp_smok)>0 else [] )
     BMI.append( np.mean(temp_BMI) )
-    Smoking.append( np.round( np.mean(temp_smok) ))
-    Site.append( temp_site[-1] ) # take the latest entry
+    Site.append( stats.mode(temp_site)[0][0] if len(temp_site)>0 else [] )
     Height.append( np.mean(temp_height) )
     Weight.append( np.mean(temp_weight) )
     Age.append( np.nanmean(temp_age) )
